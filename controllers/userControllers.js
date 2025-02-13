@@ -1,6 +1,6 @@
-const Employee = require("../models/Employee");
+import Employee from "../models/Employee.js";
 
-const getEmployees = async (req, res) => {
+export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find(); // Fetch all employees
     res.status(200).json(employees); // Send response with employees data
