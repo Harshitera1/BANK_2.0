@@ -1,5 +1,6 @@
 // Path: bank-project/models/Manager.js
-const mongoose = require("mongoose");
+//const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const managerSchema = new mongoose.Schema({
   name: String,
@@ -10,4 +11,4 @@ const managerSchema = new mongoose.Schema({
 });
 
 const Manager = mongoose.model("Manager", managerSchema);
-module.exports = Manager;
+export default Manager;
