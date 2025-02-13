@@ -1,7 +1,6 @@
-// index.js
 const express = require("express");
 const mongoose = require("mongoose");
-const userRoutes = require("./routes/userRoutes"); // Import user routes
+const userRoutes = require("./routes/userRoutes"); // Import the routes
 
 const app = express();
 const port = 3000;
@@ -11,7 +10,7 @@ app.use(express.json());
 
 // MongoDB connection
 mongoose
-  .connect("mongodb://localhost:27017", {
+  .connect("mongodb://localhost:27017/bankDB", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -22,7 +21,7 @@ mongoose
     console.error("Error connecting to MongoDB", err);
   });
 
-// Use user routes
+// Use routes for API
 app.use("/api", userRoutes);
 
 // Start the server
