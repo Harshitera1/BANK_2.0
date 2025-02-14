@@ -44,3 +44,50 @@ export async function getCustomers(req, res) {
     res.status(500).json({ message: error.message });
   }
 }
+//crud start
+export const createEmployee = async (req, res) => {
+  try {
+    const newEmployee = new Employee(req.body);
+    await newEmployee.save();
+    res.status(201).json(newEmployee);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// update employee
+export const updateEmployee = async (req, res) => {
+  const { employeeId } = req.params; // Use employeeId from the URL
+  const { name, role, department, salary, hireDate } = req.body;
+
+  try {
+    const updatedEmployee = await Employee.findOneAndUpdate(
+      { employeeId }, // Search by employeeId instead of _id
+      { name, role, department, salary, hireDate },
+      { new: true } // Returns the updated document
+    );
+
+    if (!updatedEmployee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    res.status(200).json(updatedEmployee);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+//delete employee
+export const deleteEmployee = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deletedEmployee = await Employee.findByIdAndDelete(id);
+
+    if (!deletedEmployee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    res.status(200).json({ message: "Employee deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
