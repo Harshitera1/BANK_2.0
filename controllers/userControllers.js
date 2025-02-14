@@ -77,10 +77,9 @@ export const updateEmployee = async (req, res) => {
 };
 //delete employee
 export const deleteEmployee = async (req, res) => {
-  const { id } = req.params;
-
+  const { employeeId } = req.params; // Use employeeId from URL
   try {
-    const deletedEmployee = await Employee.findByIdAndDelete(id);
+    const deletedEmployee = await Employee.findOneAndDelete({ employeeId }); // Find by employeeId
 
     if (!deletedEmployee) {
       return res.status(404).json({ message: "Employee not found" });

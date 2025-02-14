@@ -20,7 +20,5 @@ router.get("/users", getUsers);
 router.get("/customers", getCustomers);
 router.post("/employees", createEmployee);
 router.put("/employees/:employeeId", updateEmployee); // Use employeeId instead of _id
-
-router.delete("/employees/:id", deleteEmployee);
-
+router.delete("/employees/:employeeId", deleteEmployee);
 export default router;
