@@ -1,6 +1,5 @@
 // Path: bank-project/models/Employee.js
 import mongoose from "mongoose";
-
 const employeeSchema = new mongoose.Schema({
   name: String,
   role: String,
