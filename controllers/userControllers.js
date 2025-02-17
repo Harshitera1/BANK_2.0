@@ -188,3 +188,137 @@ export const deleteManager = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+//CREATE TRANSACTIONS
+export const createTransaction = async (req, res) => {
+  try {
+    const { transactionId, userAccount, type, amount, date, status } = req.body;
+
+    if (
+      !transactionId ||
+      !userAccount ||
+      !type ||
+      !amount ||
+      !date ||
+      !status
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const newTransaction = new Transactions({
+      transactionId,
+      userAccount,
+      type,
+      amount,
+      date: new Date(date),
+      status,
+    });
+
+    await newTransaction.save();
+    res.status(201).json(newTransaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//DELETE TRANSACTIONS
+export const deleteTransaction = async (req, res) => {
+  const { transactionId } = req.params;
+
+  try {
+    const deletedTransaction = await Transactions.findOneAndDelete({
+      transactionId,
+    });
+
+    if (!deletedTransaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    res.status(200).json({ message: "Transaction deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+//UPDATE TRANSACTION
+export const updateTransaction = async (req, res) => {
+  const { transactionId } = req.params;
+  const { amount, transactionType, accountNumber, date } = req.body;
+
+  try {
+    const updatedTransaction = await Transactions.findOneAndUpdate(
+      { transactionId },
+      { amount, transactionType, accountNumber, date },
+      { new: true }
+    );
+
+    if (!updatedTransaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    res.status(200).json(updatedTransaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// ✅ CREATE USER
+export const createUser = async (req, res) => {
+  try {
+    const { userId, name, email, accountNumber, balance } = req.body;
+
+    if (!userId || !name || !email || !accountNumber || balance === undefined) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const newUser = new User({
+      userId,
+      name,
+      email,
+      accountNumber,
+      balance,
+      createdAt: new Date(),
+    });
+
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ DELETE USER
+export const deleteUser = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const deletedUser = await User.findOneAndDelete({ userId });
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ UPDATE USER
+export const updateUser = async (req, res) => {
+  const { userId } = req.params;
+  const { name, email, accountNumber, balance } = req.body;
+
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { userId },
+      { name, email, accountNumber, balance },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
