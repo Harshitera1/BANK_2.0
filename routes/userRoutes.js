@@ -37,5 +37,4 @@ router.get("/transactions", getTransactions);
 router.post("/users", createUser);
 router.put("/users/:userId", updateUser);
 router.delete("/users/:userId", deleteUser);
-
 export default router;
