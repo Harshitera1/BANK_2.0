@@ -16,6 +16,10 @@ import { updateTransaction } from "../controllers/userControllers.js";
 import { updateUser } from "../controllers/userControllers.js";
 import { createUser } from "../controllers/userControllers.js";
 import { deleteUser } from "../controllers/userControllers.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { registerUser, loginUser } from "../controllers/userControllers.js";
+// import { verifyToken } from "../utils/jwt.js";
+
 const router = express.Router();
 
 // Route to get all employees
@@ -33,8 +37,14 @@ router.delete("/managers/:managerId", deleteManager);
 router.post("/transactions", createTransaction);
 router.put("/transactions/:transactionId", updateTransaction);
 router.delete("/transactions/:transactionId", deleteTransaction);
-router.get("/transactions", getTransactions);
 router.post("/users", createUser);
 router.put("/users/:userId", updateUser);
 router.delete("/users/:userId", deleteUser);
+// Public Routes
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+// Protected Route Example
+router.get("/protected-route", authMiddleware, (req, res) => {
+  res.json({ message: "Access granted!", user: req.user });
+});
 export default router;

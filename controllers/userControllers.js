@@ -3,13 +3,24 @@ import Manager from "../models/Manager.js";
 import Transactions from "../models/Transactions.js";
 import User from "../models/User.js";
 import Customer from "../models/Customer.js";
+
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
-import { generateToken, verifyToken } from "../utils/jwt.js";
+import { generateToken } from "../utils/jwt.js";
+
 // Example: Register User
 const registerUser = async (req, res) => {
+  console.log("Request Body:", req.body); // Debugging
+
   const { username, password } = req.body;
 
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ message: "Username and password are required" });
+  }
+
   const hashedPassword = await hashPassword(password);
+
   // Save `username` and `hashedPassword` to database...
 
   return res.status(201).json({ message: "User registered successfully" });
@@ -32,29 +43,6 @@ const loginUser = async (req, res) => {
 };
 
 export { registerUser, loginUser };
-// import bcrypt from "bcryptjs";
-// import jwt from "jsonwebtoken";
-
-// //stor a password
-// const hashedPassword = await bcrypt.hash(password, 10); // 10 is the salt rounds
-// const isMatch = await bcrypt.compare(enteredPassword, storedHashedPassword);
-// if (!isMatch) {
-//   return res.status(400).json({ message: "Invalid credentials" });
-// }
-// const token = jwt.sign({ userId: user._id }, "your_secret_key", { expiresIn: "1h" });
-// res.json({ token });
-// const verifyToken = (req, res, next) => {
-//   const token = req.header("Authorization");
-//   if (!token) return res.status(401).json({ message: "Access Denied" });
-
-//   try {
-//     const verified = jwt.verify(token, "your_secret_key");
-//     req.user = verified;
-//     next();
-//   } catch (err) {
-//     res.status(400).json({ message: "Invalid Token" });
-//   }
-// };
 
 // ✅ GET Employees
 export const getEmployees = async (req, res) => {
