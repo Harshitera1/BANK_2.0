@@ -24,11 +24,13 @@ import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
+// Add this route to get all users at /api/users
+router.get("/", getUsers); // No authMiddleware
 // Protected Routes (require authentication)
 router.get("/employees", authMiddleware, getEmployees);
 router.get("/managers", authMiddleware, getManagers);
 router.get("/transactions", authMiddleware, getTransactions);
-router.get("/users", authMiddleware, getUsers);
+// router.get("/users", authMiddleware, getUsers); // Optional: Remove or keep this
 router.get("/customers", authMiddleware, getCustomers);
 router.post("/employees", authMiddleware, createEmployee);
 router.put("/employees/:employeeId", authMiddleware, updateEmployee);
@@ -51,10 +53,8 @@ router.delete("/users/:userId", authMiddleware, deleteUser);
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 
-// Test Route
+// Test Routes
 router.get("/test", (req, res) => res.json({ message: "Test works" }));
-
-// Protected Test Route
 router.get("/protected-route", authMiddleware, (req, res) => {
   res.json({ message: "Access granted!", user: req.user });
 });
