@@ -7,42 +7,84 @@ import Customer from "../models/Customer.js";
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
 
-// Example: Register User
+// Register User
 const registerUser = async (req, res) => {
-  console.log("Request Body:", req.body); // Debugging
+  console.log("Request Body:", req.body);
 
-  const { username, password } = req.body;
+  const { username, password, email, accountNumber } = req.body;
 
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ message: "Username and password are required" });
+  if (!username || !password || !email || !accountNumber) {
+    return res.status(400).json({ message: "All fields are required" });
   }
 
-  const hashedPassword = await hashPassword(password);
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-  // Save `username` and `hashedPassword` to database...
+    const hashedPassword = await hashPassword(password);
 
-  return res.status(201).json({ message: "User registered successfully" });
+    const newUser = new User({
+      userId: `USR${Date.now()}`,
+      name: username,
+      email,
+      accountNumber,
+      balance: 0,
+      password: hashedPassword,
+    });
+
+    await newUser.save();
+
+    const token = generateToken(newUser._id);
+    return res.status(201).json({
+      message: "User registered successfully",
+      token,
+      user: {
+        userId: newUser.userId,
+        name: newUser.name,
+        email: newUser.email,
+        accountNumber: newUser.accountNumber,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
-// Example: Login User
+// Login User
 const loginUser = async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  // Fetch user from DB (Example)
-  const storedHashedPassword = "hashed_password_from_db"; // Replace this
-  const isMatch = await comparePassword(password, storedHashedPassword);
-
-  if (!isMatch) {
-    return res.status(400).json({ message: "Invalid credentials" });
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
   }
 
-  const token = generateToken("user_id_here"); // Replace with actual user ID
-  return res.status(200).json({ token });
-};
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
-export { registerUser, loginUser };
+    const isMatch = await comparePassword(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = generateToken(user._id);
+    return res.status(200).json({
+      token,
+      user: {
+        userId: user.userId,
+        name: user.name,
+        email: user.email,
+        accountNumber: user.accountNumber,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 // ✅ GET Employees
 export const getEmployees = async (req, res) => {
@@ -101,12 +143,10 @@ export const createEmployee = async (req, res) => {
   try {
     const { name, role, department, salary, employeeId, hireDate } = req.body;
 
-    // Validate required fields
     if (!name || !role || !department || !salary || !employeeId || !hireDate) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Create a new employee with validated fields
     const newEmployee = new Employee({
       name,
       role,
@@ -116,7 +156,6 @@ export const createEmployee = async (req, res) => {
       hireDate,
     });
 
-    // Save to database
     await newEmployee.save();
 
     res.status(201).json(newEmployee);
@@ -228,7 +267,8 @@ export const deleteManager = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-//CREATE TRANSACTIONS
+
+// CREATE TRANSACTIONS
 export const createTransaction = async (req, res) => {
   try {
     const { transactionId, userAccount, type, amount, date, status } = req.body;
@@ -260,7 +300,7 @@ export const createTransaction = async (req, res) => {
   }
 };
 
-//DELETE TRANSACTIONS
+// DELETE TRANSACTIONS
 export const deleteTransaction = async (req, res) => {
   const { transactionId } = req.params;
 
@@ -278,7 +318,8 @@ export const deleteTransaction = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-//UPDATE TRANSACTION
+
+// UPDATE TRANSACTION
 export const updateTransaction = async (req, res) => {
   const { transactionId } = req.params;
   const { amount, transactionType, accountNumber, date } = req.body;
@@ -299,6 +340,7 @@ export const updateTransaction = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 // ✅ CREATE USER
 export const createUser = async (req, res) => {
   try {
@@ -362,3 +404,6 @@ export const updateUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Export registerUser and loginUser
+export { registerUser, loginUser };

@@ -43,6 +43,17 @@ router.delete("/users/:userId", deleteUser);
 // Public Routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+//grok
+// routes/userRoutes.js
+router.get("/employees", authMiddleware, getEmployees);
+router.get("/managers", authMiddleware, getManagers);
+router.get("/transactions", authMiddleware, getTransactions);
+router.get("/users", authMiddleware, getUsers);
+router.get("/customers", authMiddleware, getCustomers);
+// Keep register and login public
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.get("/test", (req, res) => res.json({ message: "Test works" }));
 // Protected Route Example
 router.get("/protected-route", authMiddleware, (req, res) => {
   res.json({ message: "Access granted!", user: req.user });
