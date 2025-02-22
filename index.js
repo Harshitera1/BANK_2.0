@@ -1,7 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import userRoutes from "./routes/userRoutes.js"; // Rename to userRoutes for clarity
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use("/api", userRoutes); // Mount routes with /api/users prefix
+app.use("/api/users", userRoutes); // Mount user routes with /api/users prefix
 
 const connectDB = async () => {
   try {
@@ -52,8 +52,5 @@ const startServer = async () => {
     });
   });
 };
-app.get("*", (req, res) => {
-  console.log("Unmatched route:", req.path);
-  res.status(404).json({ message: "Route not found" });
-});
+
 connectDB().then(startServer);
