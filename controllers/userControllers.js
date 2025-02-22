@@ -9,6 +9,7 @@ import { generateToken } from "../utils/jwt.js";
 
 // Register User
 const registerUser = async (req, res) => {
+  console.log("registerUser function called");
   console.log("Request Body:", req.body);
 
   const { username, password, email, accountNumber } = req.body;
@@ -18,8 +19,8 @@ const registerUser = async (req, res) => {
   }
 
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const existingUser = await User.find({ email });
+    if (existingUser.length > 0) {
       return res.status(400).json({ message: "User already exists" });
     }
 
@@ -54,6 +55,7 @@ const registerUser = async (req, res) => {
 
 // Login User
 const loginUser = async (req, res) => {
+  console.log("loginUser function called");
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -61,24 +63,24 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
+    const user = await User.find({ email });
+    if (user.length === 0) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await comparePassword(password, user.password);
+    const isMatch = await comparePassword(password, user[0].password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user[0]._id);
     return res.status(200).json({
       token,
       user: {
-        userId: user.userId,
-        name: user.name,
-        email: user.email,
-        accountNumber: user.accountNumber,
+        userId: user[0].userId,
+        name: user[0].name,
+        email: user[0].email,
+        accountNumber: user[0].accountNumber,
       },
     });
   } catch (error) {
@@ -88,6 +90,7 @@ const loginUser = async (req, res) => {
 
 // ✅ GET Employees
 export const getEmployees = async (req, res) => {
+  console.log("getEmployees function called");
   try {
     const employees = await Employee.find();
     res.status(200).json(employees);
@@ -98,6 +101,7 @@ export const getEmployees = async (req, res) => {
 
 // ✅ GET Managers
 export const getManagers = async (req, res) => {
+  console.log("getManagers function called");
   try {
     const managers = await Manager.find();
     res.status(200).json(managers);
@@ -108,6 +112,7 @@ export const getManagers = async (req, res) => {
 
 // ✅ GET Transactions
 export const getTransactions = async (req, res) => {
+  console.log("getTransactions function called");
   try {
     const transactions = await Transactions.find();
     res.status(200).json(transactions);
@@ -118,6 +123,7 @@ export const getTransactions = async (req, res) => {
 
 // ✅ GET Users
 export const getUsers = async (req, res) => {
+  console.log("getUsers function called");
   try {
     const users = await User.find();
     res.status(200).json(users);
@@ -128,6 +134,7 @@ export const getUsers = async (req, res) => {
 
 // ✅ GET Customers
 export const getCustomers = async (req, res) => {
+  console.log("getCustomers function called");
   try {
     const customers = await Customer.find();
     res.status(200).json(customers);
@@ -140,6 +147,7 @@ export const getCustomers = async (req, res) => {
 
 // ✅  POST Create Employee
 export const createEmployee = async (req, res) => {
+  console.log("createEmployee function called");
   try {
     const { name, role, department, salary, employeeId, hireDate } = req.body;
 
@@ -166,14 +174,23 @@ export const createEmployee = async (req, res) => {
 
 // ✅ Update Employee
 export const updateEmployee = async (req, res) => {
+  console.log("updateEmployee function called");
   const { employeeId } = req.params;
   const { name, role, department, salary, hireDate } = req.body;
 
   try {
-    const updatedEmployee = await Employee.findOneAndUpdate(
-      { employeeId },
-      { name, role, department, salary, hireDate },
-      { new: true }
+    const updatedEmployee = await Employee.find({ employeeId }).then(
+      (employee) => {
+        if (employee.length > 0) {
+          employee[0].name = name;
+          employee[0].role = role;
+          employee[0].department = department;
+          employee[0].salary = salary;
+          employee[0].hireDate = hireDate;
+          return employee[0].save();
+        }
+        return null;
+      }
     );
 
     if (!updatedEmployee) {
@@ -188,10 +205,18 @@ export const updateEmployee = async (req, res) => {
 
 // ✅ Delete Employee
 export const deleteEmployee = async (req, res) => {
+  console.log("deleteEmployee function called");
   const { employeeId } = req.params;
 
   try {
-    const deletedEmployee = await Employee.findOneAndDelete({ employeeId });
+    const deletedEmployee = await Employee.find({ employeeId }).then(
+      (employee) => {
+        if (employee.length > 0) {
+          return employee[0].remove();
+        }
+        return null;
+      }
+    );
 
     if (!deletedEmployee) {
       return res.status(404).json({ message: "Employee not found" });
@@ -207,6 +232,7 @@ export const deleteEmployee = async (req, res) => {
 
 // ✅ Create Manager
 export const createManager = async (req, res) => {
+  console.log("createManager function called");
   try {
     const { name, department, email, hireDate, managerId } = req.body;
 
@@ -231,15 +257,21 @@ export const createManager = async (req, res) => {
 
 // ✅ Update Manager
 export const updateManager = async (req, res) => {
+  console.log("updateManager function called");
   const { managerId } = req.params;
   const { name, department, salary, hireDate } = req.body;
 
   try {
-    const updatedManager = await Manager.findOneAndUpdate(
-      { managerId },
-      { name, department, salary, hireDate },
-      { new: true }
-    );
+    const updatedManager = await Manager.find({ managerId }).then((manager) => {
+      if (manager.length > 0) {
+        manager[0].name = name;
+        manager[0].department = department;
+        manager[0].salary = salary;
+        manager[0].hireDate = hireDate;
+        return manager[0].save();
+      }
+      return null;
+    });
 
     if (!updatedManager) {
       return res.status(404).json({ message: "Manager not found" });
@@ -253,10 +285,16 @@ export const updateManager = async (req, res) => {
 
 // ✅ Delete Manager
 export const deleteManager = async (req, res) => {
+  console.log("deleteManager function called");
   const { managerId } = req.params;
 
   try {
-    const deletedManager = await Manager.findOneAndDelete({ managerId });
+    const deletedManager = await Manager.find({ managerId }).then((manager) => {
+      if (manager.length > 0) {
+        return manager[0].remove();
+      }
+      return null;
+    });
 
     if (!deletedManager) {
       return res.status(404).json({ message: "Manager not found" });
@@ -270,6 +308,7 @@ export const deleteManager = async (req, res) => {
 
 // CREATE TRANSACTIONS
 export const createTransaction = async (req, res) => {
+  console.log("createTransaction function called");
   try {
     const { transactionId, userAccount, type, amount, date, status } = req.body;
 
@@ -302,12 +341,18 @@ export const createTransaction = async (req, res) => {
 
 // DELETE TRANSACTIONS
 export const deleteTransaction = async (req, res) => {
+  console.log("deleteTransaction function called");
   const { transactionId } = req.params;
 
   try {
-    const deletedTransaction = await Transactions.findOneAndDelete({
-      transactionId,
-    });
+    const deletedTransaction = await Transactions.find({ transactionId }).then(
+      (transaction) => {
+        if (transaction.length > 0) {
+          return transaction[0].remove();
+        }
+        return null;
+      }
+    );
 
     if (!deletedTransaction) {
       return res.status(404).json({ message: "Transaction not found" });
@@ -321,14 +366,22 @@ export const deleteTransaction = async (req, res) => {
 
 // UPDATE TRANSACTION
 export const updateTransaction = async (req, res) => {
+  console.log("updateTransaction function called");
   const { transactionId } = req.params;
-  const { amount, transactionType, accountNumber, date } = req.body;
+  const { amount, type, userAccount, date } = req.body; // Corrected field names
 
   try {
-    const updatedTransaction = await Transactions.findOneAndUpdate(
-      { transactionId },
-      { amount, transactionType, accountNumber, date },
-      { new: true }
+    const updatedTransaction = await Transactions.find({ transactionId }).then(
+      (transaction) => {
+        if (transaction.length > 0) {
+          transaction[0].amount = amount;
+          transaction[0].type = type;
+          transaction[0].userAccount = userAccount;
+          transaction[0].date = date;
+          return transaction[0].save();
+        }
+        return null;
+      }
     );
 
     if (!updatedTransaction) {
@@ -343,6 +396,7 @@ export const updateTransaction = async (req, res) => {
 
 // ✅ CREATE USER
 export const createUser = async (req, res) => {
+  console.log("createUser function called");
   try {
     const { userId, name, email, accountNumber, balance } = req.body;
 
@@ -368,10 +422,16 @@ export const createUser = async (req, res) => {
 
 // ✅ DELETE USER
 export const deleteUser = async (req, res) => {
+  console.log("deleteUser function called");
   const { userId } = req.params;
 
   try {
-    const deletedUser = await User.findOneAndDelete({ userId });
+    const deletedUser = await User.find({ userId }).then((user) => {
+      if (user.length > 0) {
+        return user[0].remove();
+      }
+      return null;
+    });
 
     if (!deletedUser) {
       return res.status(404).json({ message: "User not found" });
@@ -385,15 +445,21 @@ export const deleteUser = async (req, res) => {
 
 // ✅ UPDATE USER
 export const updateUser = async (req, res) => {
+  console.log("updateUser function called");
   const { userId } = req.params;
   const { name, email, accountNumber, balance } = req.body;
 
   try {
-    const updatedUser = await User.findOneAndUpdate(
-      { userId },
-      { name, email, accountNumber, balance },
-      { new: true }
-    );
+    const updatedUser = await User.find({ userId }).then((user) => {
+      if (user.length > 0) {
+        user[0].name = name;
+        user[0].email = email;
+        user[0].accountNumber = accountNumber;
+        user[0].balance = balance;
+        return user[0].save();
+      }
+      return null;
+    });
 
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
