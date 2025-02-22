@@ -1,4 +1,3 @@
-// models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
@@ -7,7 +6,12 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   accountNumber: { type: String, required: true, unique: true },
   balance: { type: Number, required: true, default: 0 },
-  password: { type: String, required: true }, // Add this
+  password: { type: String, required: true },
+  role: {
+    type: String,
+    enum: ["customer", "employee", "manager"],
+    default: "customer",
+  }, // Added role
   createdAt: { type: Date, default: Date.now },
 });
 

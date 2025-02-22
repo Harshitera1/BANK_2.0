@@ -1,7 +1,7 @@
 import { verifyToken } from "../utils/jwt.js";
 
 export const authMiddleware = (req, res, next) => {
-  console.log("Full Headers:", req.headers); // Log all headers
+  console.log("Full Headers:", req.headers);
   const token = req.headers.authorization?.split(" ")[1];
   console.log("Authorization Header:", req.headers.authorization);
   console.log("Extracted Token:", token);
@@ -11,7 +11,7 @@ export const authMiddleware = (req, res, next) => {
       .status(401)
       .json({ message: "Access denied. No token provided." });
   }
-  // ... (rest unchanged)
+
   try {
     const decoded = verifyToken(token);
     if (!decoded) {
@@ -23,4 +23,5 @@ export const authMiddleware = (req, res, next) => {
     return res.status(401).json({ message: "Authentication failed." });
   }
 };
+
 export default authMiddleware;

@@ -19,39 +19,121 @@ import {
   deleteUser,
   registerUser,
   loginUser,
+  deposit,
+  withdraw,
+  transfer,
 } from "../controllers/userControllers.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { roleMiddleware } from "../middlewares/roleMiddleware.js"; // Added roleMiddleware
 
 const router = express.Router();
 
-// Add this route to get all users at /api/users
-router.get("/", getUsers); // No authMiddleware
-// Protected Routes (require authentication)
-router.get("/employees", authMiddleware, getEmployees);
-router.get("/managers", authMiddleware, getManagers);
-router.get("/transactions", authMiddleware, getTransactions);
-// router.get("/users", authMiddleware, getUsers); // Optional: Remove or keep this
-router.get("/customers", authMiddleware, getCustomers);
-router.post("/employees", authMiddleware, createEmployee);
-router.put("/employees/:employeeId", authMiddleware, updateEmployee);
-router.delete("/employees/:employeeId", authMiddleware, deleteEmployee);
-router.post("/managers", authMiddleware, createManager);
-router.put("/managers/:managerId", authMiddleware, updateManager);
-router.delete("/managers/:managerId", authMiddleware, deleteManager);
-router.post("/transactions", authMiddleware, createTransaction);
-router.put("/transactions/:transactionId", authMiddleware, updateTransaction);
+// Public Routes
+router.get("/", getUsers);
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+
+// Protected Routes with RBAC
+router.get(
+  "/employees",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  getEmployees
+);
+router.get(
+  "/managers",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  getManagers
+);
+router.get(
+  "/transactions",
+  authMiddleware,
+  roleMiddleware(["employee", "manager"]),
+  getTransactions
+);
+router.get(
+  "/customers",
+  authMiddleware,
+  roleMiddleware(["employee", "manager"]),
+  getCustomers
+);
+
+router.post(
+  "/employees",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  createEmployee
+);
+router.put(
+  "/employees/:employeeId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  updateEmployee
+);
+router.delete(
+  "/employees/:employeeId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  deleteEmployee
+);
+
+router.post(
+  "/managers",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  createManager
+);
+router.put(
+  "/managers/:managerId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  updateManager
+);
+router.delete(
+  "/managers/:managerId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  deleteManager
+);
+
+router.post(
+  "/transactions",
+  authMiddleware,
+  roleMiddleware(["employee", "manager"]),
+  createTransaction
+);
+router.put(
+  "/transactions/:transactionId",
+  authMiddleware,
+  roleMiddleware(["employee", "manager"]),
+  updateTransaction
+);
 router.delete(
   "/transactions/:transactionId",
   authMiddleware,
+  roleMiddleware(["employee", "manager"]),
   deleteTransaction
 );
-router.post("/users", authMiddleware, createUser);
-router.put("/users/:userId", authMiddleware, updateUser);
-router.delete("/users/:userId", authMiddleware, deleteUser);
 
-// Public Routes
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/users", authMiddleware, roleMiddleware(["manager"]), createUser);
+router.put(
+  "/users/:userId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  updateUser
+);
+router.delete(
+  "/users/:userId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  deleteUser
+);
+
+// Banking Routes (accessible to authenticated users)
+router.post("/deposit", authMiddleware, deposit);
+router.post("/withdraw", authMiddleware, withdraw);
+router.post("/transfer", authMiddleware, transfer);
 
 // Test Routes
 router.get("/test", (req, res) => res.json({ message: "Test works" }));
