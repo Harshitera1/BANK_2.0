@@ -1,9 +1,9 @@
 import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
-import Transaction from "../models/Transaction.js"; // Corrected from Transactions.js
+import Transaction from "../models/Transaction.js";
 import User from "../models/User.js";
 import Customer from "../models/Customer.js";
-import Joi from "joi"; // Added Joi import
+import Joi from "joi";
 
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
@@ -60,7 +60,7 @@ export const registerUser = async (req, res) => {
       accountNumber,
       balance: 0,
       password: hashedPassword,
-      role: "customer", // Explicitly set default role
+      role: "customer",
     });
 
     await newUser.save();
@@ -116,7 +116,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// Core Banking Features
+// Core Banking Features with Ownership Checks
 export const deposit = async (req, res) => {
   const { error } = depositSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
@@ -124,8 +124,21 @@ export const deposit = async (req, res) => {
   const { accountNumber, amount } = req.body;
 
   try {
+    const currentUser = await User.findById(req.user.userId);
+    if (!currentUser)
+      return res.status(404).json({ message: "User not found" });
+
+    if (
+      currentUser.role === "customer" &&
+      currentUser.accountNumber !== accountNumber
+    ) {
+      return res
+        .status(403)
+        .json({ message: "You can only deposit to your own account" });
+    }
+
     const user = await User.findOne({ accountNumber });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "Account not found" });
 
     user.balance += amount;
     await user.save();
@@ -155,8 +168,21 @@ export const withdraw = async (req, res) => {
   const { accountNumber, amount } = req.body;
 
   try {
+    const currentUser = await User.findById(req.user.userId);
+    if (!currentUser)
+      return res.status(404).json({ message: "User not found" });
+
+    if (
+      currentUser.role === "customer" &&
+      currentUser.accountNumber !== accountNumber
+    ) {
+      return res
+        .status(403)
+        .json({ message: "You can only withdraw from your own account" });
+    }
+
     const user = await User.findOne({ accountNumber });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "Account not found" });
     if (user.balance < amount)
       return res.status(400).json({ message: "Insufficient funds" });
 
@@ -188,6 +214,19 @@ export const transfer = async (req, res) => {
   const { fromAccount, toAccount, amount } = req.body;
 
   try {
+    const currentUser = await User.findById(req.user.userId);
+    if (!currentUser)
+      return res.status(404).json({ message: "User not found" });
+
+    if (
+      currentUser.role === "customer" &&
+      currentUser.accountNumber !== fromAccount
+    ) {
+      return res
+        .status(403)
+        .json({ message: "You can only transfer from your own account" });
+    }
+
     const sender = await User.findOne({ accountNumber: fromAccount });
     const receiver = await User.findOne({ accountNumber: toAccount });
 
@@ -195,6 +234,12 @@ export const transfer = async (req, res) => {
       return res.status(404).json({ message: "Account not found" });
     if (sender.balance < amount)
       return res.status(400).json({ message: "Insufficient funds" });
+
+    if (fromAccount === toAccount) {
+      return res
+        .status(400)
+        .json({ message: "Cannot transfer to the same account" });
+    }
 
     sender.balance -= amount;
     receiver.balance += amount;
@@ -231,7 +276,7 @@ export const transfer = async (req, res) => {
   }
 };
 
-// Existing Functions (Updated Exports Only)
+// Existing Functions
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find();
@@ -277,8 +322,51 @@ export const getCustomers = async (req, res) => {
   }
 };
 
-// CRUD for Employees, Managers, Transactions, Users remain unchanged except exports
-export { createEmployee, updateEmployee, deleteEmployee };
-export { createManager, updateManager, deleteManager };
-export { createTransaction, updateTransaction, deleteTransaction };
-export { createUser, updateUser, deleteUser };
+// Placeholder CRUD Functions
+export const createEmployee = async (req, res) => {
+  res.status(501).json({ message: "Create employee not implemented" });
+};
+
+export const updateEmployee = async (req, res) => {
+  res.status(501).json({ message: "Update employee not implemented" });
+};
+
+export const deleteEmployee = async (req, res) => {
+  res.status(501).json({ message: "Delete employee not implemented" });
+};
+
+export const createManager = async (req, res) => {
+  res.status(501).json({ message: "Create manager not implemented" });
+};
+
+export const updateManager = async (req, res) => {
+  res.status(501).json({ message: "Update manager not implemented" });
+};
+
+export const deleteManager = async (req, res) => {
+  res.status(501).json({ message: "Delete manager not implemented" });
+};
+
+export const createTransaction = async (req, res) => {
+  res.status(501).json({ message: "Create transaction not implemented" });
+};
+
+export const updateTransaction = async (req, res) => {
+  res.status(501).json({ message: "Update transaction not implemented" });
+};
+
+export const deleteTransaction = async (req, res) => {
+  res.status(501).json({ message: "Delete transaction not implemented" });
+};
+
+export const createUser = async (req, res) => {
+  res.status(501).json({ message: "Create user not implemented" });
+};
+
+export const updateUser = async (req, res) => {
+  res.status(501).json({ message: "Update user not implemented" });
+};
+
+export const deleteUser = async (req, res) => {
+  res.status(501).json({ message: "Delete user not implemented" });
+};

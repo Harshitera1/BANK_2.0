@@ -1,10 +1,10 @@
 import { verifyToken } from "../utils/jwt.js";
 
 export const authMiddleware = (req, res, next) => {
-  console.log("Full Headers:", req.headers);
+  // console.log("Full Headers:", req.headers);
   const token = req.headers.authorization?.split(" ")[1];
-  console.log("Authorization Header:", req.headers.authorization);
-  console.log("Extracted Token:", token);
+  // console.log("Authorization Header:", req.headers.authorization);
+  // console.log("Extracted Token:", token);
 
   if (!token) {
     return res

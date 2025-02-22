@@ -9,7 +9,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use("/api/users", userRoutes); // Mount user routes with /api/users prefix
+app.use("/api/users", userRoutes);
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled Error:", err.stack);
+  res.status(500).json({ message: "An unexpected error occurred." });
+});
 
 const connectDB = async () => {
   try {
