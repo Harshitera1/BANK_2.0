@@ -11,24 +11,24 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use("/api/users", userRoutes);
 
-// Global Error Handler
+// Global error handler for uncaught route/middleware errors
 app.use((err, req, res, next) => {
   console.error("Unhandled Error:", err.stack);
   res.status(500).json({ message: "An unexpected error occurred." });
 });
 
+// Connect to MongoDB without deprecated options
 const connectDB = async () => {
   try {
-    await mongoose.connect(
-      process.env.MONGO_URI || "mongodb://localhost:27017/bankDB"
-    );
+    await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ Connected to MongoDB");
   } catch (err) {
     console.error("❌ Error connecting to MongoDB:", err);
-    process.exit(1);
+    process.exit(1); // Exit if MongoDB connection fails
   }
 };
 
+// Clear port if already in use (optional utility)
 const killPort = (port) => {
   return new Promise((resolve, reject) => {
     import("child_process").then(({ exec }) => {
@@ -45,18 +45,38 @@ const killPort = (port) => {
   });
 };
 
+// Start the server
 const startServer = async () => {
-  await killPort(PORT);
-  const server = app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  });
-
-  process.on("SIGINT", () => {
-    server.close(() => {
-      console.log("⚠️ Server closed due to app termination.");
-      process.exit(0);
+  try {
+    await killPort(PORT); // Optional: clears port if in use
+    await connectDB(); // Connect to MongoDB first
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
     });
-  });
+
+    // Graceful shutdown on termination
+    process.on("SIGINT", () => {
+      server.close(() => {
+        console.log("⚠️ Server closed due to app termination.");
+        process.exit(0);
+      });
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
 };
 
-connectDB().then(startServer);
+// Handle uncaught exceptions and rejections
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
+});
+
+// Start the application
+startServer();

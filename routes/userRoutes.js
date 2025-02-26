@@ -1,22 +1,25 @@
 import express from "express";
 import {
   createManager,
-  deleteEmployee,
   deleteManager,
-  getEmployees,
-  updateEmployee,
   updateManager,
   getManagers,
-  getTransactions,
-  getUsers,
-  getCustomers,
   createEmployee,
+  deleteEmployee,
+  updateEmployee,
+  getEmployees,
   createTransaction,
   deleteTransaction,
   updateTransaction,
-  updateUser,
+  getTransactions,
   createUser,
   deleteUser,
+  updateUser,
+  getUsers,
+  createCustomer,
+  deleteCustomer,
+  updateCustomer,
+  getCustomers,
   registerUser,
   loginUser,
   deposit,
@@ -24,7 +27,7 @@ import {
   transfer,
 } from "../controllers/userControllers.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js"; // Added roleMiddleware
+import { roleMiddleware } from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
 
@@ -40,25 +43,6 @@ router.get(
   roleMiddleware(["manager"]),
   getEmployees
 );
-router.get(
-  "/managers",
-  authMiddleware,
-  roleMiddleware(["manager"]),
-  getManagers
-);
-router.get(
-  "/transactions",
-  authMiddleware,
-  roleMiddleware(["employee", "manager"]),
-  getTransactions
-);
-router.get(
-  "/customers",
-  authMiddleware,
-  roleMiddleware(["employee", "manager"]),
-  getCustomers
-);
-
 router.post(
   "/employees",
   authMiddleware,
@@ -78,6 +62,12 @@ router.delete(
   deleteEmployee
 );
 
+router.get(
+  "/managers",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  getManagers
+);
 router.post(
   "/managers",
   authMiddleware,
@@ -97,6 +87,12 @@ router.delete(
   deleteManager
 );
 
+router.get(
+  "/transactions",
+  authMiddleware,
+  roleMiddleware(["employee", "manager"]),
+  getTransactions
+);
 router.post(
   "/transactions",
   authMiddleware,
@@ -116,6 +112,7 @@ router.delete(
   deleteTransaction
 );
 
+router.get("/users", authMiddleware, roleMiddleware(["manager"]), getUsers);
 router.post("/users", authMiddleware, roleMiddleware(["manager"]), createUser);
 router.put(
   "/users/:userId",
@@ -130,7 +127,32 @@ router.delete(
   deleteUser
 );
 
-// Banking Routes (accessible to authenticated users)
+router.get(
+  "/customers",
+  authMiddleware,
+  roleMiddleware(["employee", "manager"]),
+  getCustomers
+);
+router.post(
+  "/customers",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  createCustomer
+);
+router.put(
+  "/customers/:employeeId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  updateCustomer
+);
+router.delete(
+  "/customers/:employeeId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  deleteCustomer
+);
+
+// Banking Routes
 router.post("/deposit", authMiddleware, deposit);
 router.post("/withdraw", authMiddleware, withdraw);
 router.post("/transfer", authMiddleware, transfer);

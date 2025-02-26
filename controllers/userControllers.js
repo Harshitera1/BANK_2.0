@@ -2,9 +2,8 @@ import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
 import Transaction from "../models/Transaction.js";
 import User from "../models/User.js";
-import Customer from "../models/Customer.js";
+import Customer from "../models/Customer.js"; // Note: Consider consolidating into User
 import Joi from "joi";
-
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
 
@@ -37,6 +36,90 @@ const transferSchema = Joi.object({
   amount: Joi.number().positive().required(),
 });
 
+const createEmployeeSchema = Joi.object({
+  name: Joi.string().required(),
+  role: Joi.string().required(),
+  department: Joi.string().required(),
+  salary: Joi.number().positive().required(),
+  employeeId: Joi.string().required(),
+  hireDate: Joi.date().required(),
+});
+
+const updateEmployeeSchema = Joi.object({
+  name: Joi.string(),
+  role: Joi.string(),
+  department: Joi.string(),
+  salary: Joi.number().positive(),
+  employeeId: Joi.string(),
+  hireDate: Joi.date(),
+}).min(1);
+
+const createManagerSchema = Joi.object({
+  managerId: Joi.string().required(),
+  name: Joi.string().required(),
+  department: Joi.string().required(),
+  email: Joi.string().email().required(),
+  hireDate: Joi.date().required(),
+});
+
+const updateManagerSchema = Joi.object({
+  managerId: Joi.string(),
+  name: Joi.string(),
+  department: Joi.string(),
+  email: Joi.string().email(),
+  hireDate: Joi.date(),
+}).min(1);
+
+const createTransactionSchema = Joi.object({
+  transactionId: Joi.string().required(),
+  userAccount: Joi.string().required(),
+  type: Joi.string().required(),
+  amount: Joi.number().required(),
+  date: Joi.date().required(),
+  status: Joi.string().required(),
+});
+
+const updateTransactionSchema = Joi.object({
+  transactionId: Joi.string(),
+  userAccount: Joi.string(),
+  type: Joi.string(),
+  amount: Joi.number(),
+  date: Joi.date(),
+  status: Joi.string(),
+}).min(1);
+
+const createUserSchema = Joi.object({
+  name: Joi.string().required(),
+  email: Joi.string().email().required(),
+  accountNumber: Joi.string().length(10).required(),
+  password: Joi.string().min(6).required(),
+  role: Joi.string().valid("customer", "employee", "manager").required(),
+});
+
+const updateUserSchema = Joi.object({
+  name: Joi.string(),
+  email: Joi.string().email(),
+  accountNumber: Joi.string().length(10),
+  password: Joi.string().min(6),
+  role: Joi.string().valid("customer", "employee", "manager"),
+}).min(1);
+
+const createCustomerSchema = Joi.object({
+  name: Joi.string().required(),
+  department: Joi.string().required(),
+  salary: Joi.number().positive().required(),
+  employeeId: Joi.string().required(),
+  hireDate: Joi.date().required(),
+});
+
+const updateCustomerSchema = Joi.object({
+  name: Joi.string(),
+  department: Joi.string(),
+  salary: Joi.number().positive(),
+  employeeId: Joi.string(),
+  hireDate: Joi.date(),
+}).min(1);
+
 // Register User
 export const registerUser = async (req, res) => {
   console.log("Request Body:", req.body);
@@ -47,9 +130,8 @@ export const registerUser = async (req, res) => {
 
   try {
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    if (existingUser)
       return res.status(400).json({ message: "User already exists" });
-    }
 
     const hashedPassword = await hashPassword(password);
 
@@ -91,14 +173,11 @@ export const loginUser = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const isMatch = await comparePassword(password, user.password);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
-    }
 
     const token = generateToken(user._id, user.role);
     return res.status(200).json({
@@ -116,7 +195,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// Core Banking Features with Ownership Checks
+// Banking Functions
 export const deposit = async (req, res) => {
   const { error } = depositSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
@@ -234,12 +313,10 @@ export const transfer = async (req, res) => {
       return res.status(404).json({ message: "Account not found" });
     if (sender.balance < amount)
       return res.status(400).json({ message: "Insufficient funds" });
-
-    if (fromAccount === toAccount) {
+    if (fromAccount === toAccount)
       return res
         .status(400)
         .json({ message: "Cannot transfer to the same account" });
-    }
 
     sender.balance -= amount;
     receiver.balance += amount;
@@ -276,7 +353,7 @@ export const transfer = async (req, res) => {
   }
 };
 
-// Existing Functions
+// CRUD for Employees
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find();
@@ -286,6 +363,68 @@ export const getEmployees = async (req, res) => {
   }
 };
 
+export const createEmployee = async (req, res) => {
+  const { error } = createEmployeeSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { name, role, department, salary, employeeId, hireDate } = req.body;
+
+  try {
+    const existingEmployee = await Employee.findOne({ employeeId });
+    if (existingEmployee)
+      return res.status(400).json({ message: "Employee ID already exists" });
+
+    const newEmployee = new Employee({
+      name,
+      role,
+      department,
+      salary,
+      employeeId,
+      hireDate,
+    });
+    await newEmployee.save();
+    res.status(201).json(newEmployee);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateEmployee = async (req, res) => {
+  const { error } = updateEmployeeSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { employeeId } = req.params;
+  const updateData = req.body;
+
+  try {
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
+
+    Object.assign(employee, updateData);
+    await employee.save();
+    res.status(200).json(employee);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteEmployee = async (req, res) => {
+  const { employeeId } = req.params;
+
+  try {
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
+
+    await employee.remove();
+    res.status(200).json({ message: "Employee deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// CRUD for Managers
 export const getManagers = async (req, res) => {
   try {
     const managers = await Manager.find();
@@ -295,6 +434,65 @@ export const getManagers = async (req, res) => {
   }
 };
 
+export const createManager = async (req, res) => {
+  const { error } = createManagerSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { managerId, name, department, email, hireDate } = req.body;
+
+  try {
+    const existingManager = await Manager.findOne({ managerId });
+    if (existingManager)
+      return res.status(400).json({ message: "Manager ID already exists" });
+
+    const newManager = new Manager({
+      managerId,
+      name,
+      department,
+      email,
+      hireDate,
+    });
+    await newManager.save();
+    res.status(201).json(newManager);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateManager = async (req, res) => {
+  const { error } = updateManagerSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { managerId } = req.params;
+  const updateData = req.body;
+
+  try {
+    const manager = await Manager.findOne({ managerId });
+    if (!manager) return res.status(404).json({ message: "Manager not found" });
+
+    Object.assign(manager, updateData);
+    await manager.save();
+    res.status(200).json(manager);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteManager = async (req, res) => {
+  const { managerId } = req.params;
+
+  try {
+    const manager = await Manager.findOne({ managerId });
+    if (!manager) return res.status(404).json({ message: "Manager not found" });
+
+    await manager.remove();
+    res.status(200).json({ message: "Manager deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// CRUD for Transactions
 export const getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find();
@@ -304,6 +502,68 @@ export const getTransactions = async (req, res) => {
   }
 };
 
+export const createTransaction = async (req, res) => {
+  const { error } = createTransactionSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { transactionId, userAccount, type, amount, date, status } = req.body;
+
+  try {
+    const existingTransaction = await Transaction.findOne({ transactionId });
+    if (existingTransaction)
+      return res.status(400).json({ message: "Transaction ID already exists" });
+
+    const newTransaction = new Transaction({
+      transactionId,
+      userAccount,
+      type,
+      amount,
+      date,
+      status,
+    });
+    await newTransaction.save();
+    res.status(201).json(newTransaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateTransaction = async (req, res) => {
+  const { error } = updateTransactionSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { transactionId } = req.params;
+  const updateData = req.body;
+
+  try {
+    const transaction = await Transaction.findOne({ transactionId });
+    if (!transaction)
+      return res.status(404).json({ message: "Transaction not found" });
+
+    Object.assign(transaction, updateData);
+    await transaction.save();
+    res.status(200).json(transaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteTransaction = async (req, res) => {
+  const { transactionId } = req.params;
+
+  try {
+    const transaction = await Transaction.findOne({ transactionId });
+    if (!transaction)
+      return res.status(404).json({ message: "Transaction not found" });
+
+    await transaction.remove();
+    res.status(200).json({ message: "Transaction deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// CRUD for Users
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find();
@@ -313,6 +573,95 @@ export const getUsers = async (req, res) => {
   }
 };
 
+export const createUser = async (req, res) => {
+  const { error } = createUserSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { name, email, accountNumber, password, role } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: "User already exists" });
+
+    const hashedPassword = await hashPassword(password);
+
+    const newUser = new User({
+      userId: `USR${Date.now()}`,
+      name,
+      email,
+      accountNumber,
+      balance: 0,
+      password: hashedPassword,
+      role,
+    });
+
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  const { error } = updateUserSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { userId } = req.params;
+  const updateData = req.body;
+
+  try {
+    const user = await User.findOne({ userId });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (updateData.email) {
+      const existingUser = await User.findOne({ email: updateData.email });
+      if (existingUser && existingUser.userId !== userId) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+    }
+
+    if (updateData.accountNumber) {
+      const existingUser = await User.findOne({
+        accountNumber: updateData.accountNumber,
+      });
+      if (existingUser && existingUser.userId !== userId) {
+        return res
+          .status(400)
+          .json({ message: "Account number already exists" });
+      }
+    }
+
+    for (const key in updateData) {
+      if (key === "password") {
+        user.password = await hashPassword(updateData[key]);
+      } else {
+        user[key] = updateData[key];
+      }
+    }
+
+    await user.save();
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findOne({ userId });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await user.remove();
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// CRUD for Customers (Note: Consider consolidating into User model)
 export const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.find();
@@ -322,51 +671,62 @@ export const getCustomers = async (req, res) => {
   }
 };
 
-// Placeholder CRUD Functions
-export const createEmployee = async (req, res) => {
-  res.status(501).json({ message: "Create employee not implemented" });
+export const createCustomer = async (req, res) => {
+  const { error } = createCustomerSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { name, department, salary, employeeId, hireDate } = req.body;
+
+  try {
+    const existingCustomer = await Customer.findOne({ employeeId });
+    if (existingCustomer)
+      return res.status(400).json({ message: "Customer ID already exists" });
+
+    const newCustomer = new Customer({
+      name,
+      department,
+      salary,
+      employeeId,
+      hireDate,
+    });
+    await newCustomer.save();
+    res.status(201).json(newCustomer);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
-export const updateEmployee = async (req, res) => {
-  res.status(501).json({ message: "Update employee not implemented" });
+export const updateCustomer = async (req, res) => {
+  const { error } = updateCustomerSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { employeeId } = req.params;
+  const updateData = req.body;
+
+  try {
+    const customer = await Customer.findOne({ employeeId });
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
+
+    Object.assign(customer, updateData);
+    await customer.save();
+    res.status(200).json(customer);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
-export const deleteEmployee = async (req, res) => {
-  res.status(501).json({ message: "Delete employee not implemented" });
-};
+export const deleteCustomer = async (req, res) => {
+  const { employeeId } = req.params;
 
-export const createManager = async (req, res) => {
-  res.status(501).json({ message: "Create manager not implemented" });
-};
+  try {
+    const customer = await Customer.findOne({ employeeId });
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
 
-export const updateManager = async (req, res) => {
-  res.status(501).json({ message: "Update manager not implemented" });
-};
-
-export const deleteManager = async (req, res) => {
-  res.status(501).json({ message: "Delete manager not implemented" });
-};
-
-export const createTransaction = async (req, res) => {
-  res.status(501).json({ message: "Create transaction not implemented" });
-};
-
-export const updateTransaction = async (req, res) => {
-  res.status(501).json({ message: "Update transaction not implemented" });
-};
-
-export const deleteTransaction = async (req, res) => {
-  res.status(501).json({ message: "Delete transaction not implemented" });
-};
-
-export const createUser = async (req, res) => {
-  res.status(501).json({ message: "Create user not implemented" });
-};
-
-export const updateUser = async (req, res) => {
-  res.status(501).json({ message: "Update user not implemented" });
-};
-
-export const deleteUser = async (req, res) => {
-  res.status(501).json({ message: "Delete user not implemented" });
+    await customer.remove();
+    res.status(200).json({ message: "Customer deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
