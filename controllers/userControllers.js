@@ -324,17 +324,25 @@ export const transfer = async (req, res) => {
     await sender.save();
     await receiver.save();
 
-    const transactionId = `TXN${Date.now()}`;
+    // Generate unique transaction IDs for sender and receiver
+    const senderTransactionId = `TXN${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    const receiverTransactionId = `TXN${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
     const senderTransaction = new Transaction({
-      transactionId,
+      transactionId: senderTransactionId,
       userAccount: fromAccount,
       type: "transfer_out",
       amount: -amount,
       date: new Date(),
       status: "completed",
     });
+
     const receiverTransaction = new Transaction({
-      transactionId,
+      transactionId: receiverTransactionId,
       userAccount: toAccount,
       type: "transfer_in",
       amount,
