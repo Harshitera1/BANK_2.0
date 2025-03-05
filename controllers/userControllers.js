@@ -9,10 +9,11 @@ import { generateToken } from "../utils/jwt.js";
 
 // Validation Schemas
 const registerSchema = Joi.object({
-  username: Joi.string().min(3).max(30).required(),
-  password: Joi.string().min(6).required(),
+  name: Joi.string().required(),
   email: Joi.string().email().required(),
   accountNumber: Joi.string().length(10).required(),
+  password: Joi.string().min(6).required(),
+  role: Joi.string().valid("customer", "employee", "manager").required(),
 });
 
 const loginSchema = Joi.object({
@@ -126,37 +127,54 @@ export const registerUser = async (req, res) => {
   const { error } = registerSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
 
-  const { username, password, email, accountNumber } = req.body;
+  const { name, password, email, accountNumber, role } = req.body;
 
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
+    // Check for existing email in the appropriate collection based on role
+    let existingRecord;
+    if (role === "manager") {
+      existingRecord = await Manager.findOne({ email });
+    } else {
+      existingRecord = await User.findOne({ email });
+    }
+    if (existingRecord)
       return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await hashPassword(password);
 
-    const newUser = new User({
-      userId: `USR${Date.now()}`,
-      name: username,
-      email,
-      accountNumber,
-      balance: 0,
-      password: hashedPassword,
-      role: "customer",
-    });
+    let newRecord;
+    if (role === "manager") {
+      newRecord = new Manager({
+        managerId: `MGR${Date.now()}`,
+        name,
+        email,
+        department: "Default Department", // You can make this optional or required in the schema
+        hireDate: new Date(),
+      });
+    } else {
+      newRecord = new User({
+        userId: `USR${Date.now()}`,
+        name,
+        email,
+        accountNumber,
+        balance: 0,
+        password: hashedPassword,
+        role,
+      });
+    }
 
-    await newUser.save();
+    await newRecord.save();
 
-    const token = generateToken(newUser._id, newUser.role);
+    const token = generateToken(newRecord._id, role);
     return res.status(201).json({
-      message: "User registered successfully",
+      message: "Registration successful",
       token,
       user: {
-        userId: newUser.userId,
-        name: newUser.name,
-        email: newUser.email,
-        accountNumber: newUser.accountNumber,
-        role: newUser.role,
+        id: newRecord._id,
+        name: newRecord.name,
+        email: newRecord.email,
+        role: newRecord.role || role, // Adjust based on model
+        ...(role !== "manager" && { accountNumber: newRecord.accountNumber }), // Include accountNumber only for non-managers
       },
     });
   } catch (error) {
