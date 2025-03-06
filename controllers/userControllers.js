@@ -511,13 +511,12 @@ export const deleteManager = async (req, res) => {
     const manager = await Manager.findOne({ managerId });
     if (!manager) return res.status(404).json({ message: "Manager not found" });
 
-    await manager.remove();
+    await manager.deleteOne(); // Updated to use deleteOne
     res.status(200).json({ message: "Manager deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 // CRUD for Transactions
 export const getTransactions = async (req, res) => {
   try {
