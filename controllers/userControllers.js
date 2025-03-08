@@ -130,29 +130,19 @@ export const registerUser = async (req, res) => {
   const { name, password, email, accountNumber, role } = req.body;
 
   try {
-    // Check for existing email in the appropriate collection based on role
-    let existingRecord;
-    if (role === "manager") {
-      existingRecord = await Manager.findOne({ email });
-    } else {
-      existingRecord = await User.findOne({ email });
-    }
-    if (existingRecord)
+    // Check for existing email in both User, Manager, and Employee collections
+    const existingUser = await User.findOne({ email });
+    const existingManager = await Manager.findOne({ email });
+    const existingEmployee = await Employee.findOne({ email });
+    if (existingUser || existingManager || existingEmployee)
       return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await hashPassword(password);
 
-    let newRecord;
+    let userRecord, managerRecord, employeeRecord;
     if (role === "manager") {
-      newRecord = new Manager({
-        managerId: `MGR${Date.now()}`,
-        name,
-        email,
-        department: "Default Department", // You can make this optional or required in the schema
-        hireDate: new Date(),
-      });
-    } else {
-      newRecord = new User({
+      // Create User document for authentication
+      userRecord = new User({
         userId: `USR${Date.now()}`,
         name,
         email,
@@ -161,22 +151,91 @@ export const registerUser = async (req, res) => {
         password: hashedPassword,
         role,
       });
+      await userRecord.save();
+
+      // Create Manager document for manager-specific data
+      managerRecord = new Manager({
+        managerId: `MGR${Date.now()}`,
+        name,
+        email,
+        department: "Default Department",
+        hireDate: new Date(),
+      });
+      await managerRecord.save();
+
+      // Generate token using User _id
+      const token = generateToken(userRecord._id, role);
+      return res.status(201).json({
+        message: "Registration successful",
+        token,
+        user: {
+          id: userRecord._id,
+          name: userRecord.name,
+          email: userRecord.email,
+          role: userRecord.role,
+        },
+      });
+    } else if (role === "employee") {
+      // Create User document for authentication
+      userRecord = new User({
+        userId: `USR${Date.now()}`,
+        name,
+        email,
+        accountNumber,
+        balance: 0,
+        password: hashedPassword,
+        role,
+      });
+      await userRecord.save();
+
+      // Create Employee document for employee-specific data
+      employeeRecord = new Employee({
+        name,
+        role: "Default Role", // Adjust based on schema or make optional
+        department: "Default Department",
+        salary: 0, // Default value; consider making optional
+        employeeId: `EMP${Date.now()}`,
+        hireDate: new Date(),
+      });
+      await employeeRecord.save();
+
+      // Generate token using User _id
+      const token = generateToken(userRecord._id, role);
+      return res.status(201).json({
+        message: "Registration successful",
+        token,
+        user: {
+          id: userRecord._id,
+          name: userRecord.name,
+          email: userRecord.email,
+          role: userRecord.role,
+        },
+      });
+    } else {
+      userRecord = new User({
+        userId: `USR${Date.now()}`,
+        name,
+        email,
+        accountNumber,
+        balance: 0,
+        password: hashedPassword,
+        role,
+      });
+      await userRecord.save();
+
+      const token = generateToken(userRecord._id, role);
+      return res.status(201).json({
+        message: "Registration successful",
+        token,
+        user: {
+          id: userRecord._id,
+          name: userRecord.name,
+          email: userRecord.email,
+          accountNumber: userRecord.accountNumber,
+          role: userRecord.role,
+        },
+      });
     }
-
-    await newRecord.save();
-
-    const token = generateToken(newRecord._id, role);
-    return res.status(201).json({
-      message: "Registration successful",
-      token,
-      user: {
-        id: newRecord._id,
-        name: newRecord.name,
-        email: newRecord.email,
-        role: newRecord.role || role, // Adjust based on model
-        ...(role !== "manager" && { accountNumber: newRecord.accountNumber }), // Include accountNumber only for non-managers
-      },
-    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
