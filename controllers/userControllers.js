@@ -636,11 +636,16 @@ export const deleteTransaction = async (req, res) => {
   const { transactionId } = req.params;
 
   try {
+    // Find the transaction by its ID
     const transaction = await Transaction.findOne({ transactionId });
-    if (!transaction)
+    if (!transaction) {
       return res.status(404).json({ message: "Transaction not found" });
+    }
 
-    await transaction.remove();
+    // Replace remove() with deleteOne()
+    await transaction.deleteOne();
+
+    // Send success response
     res.status(200).json({ message: "Transaction deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
