@@ -25,6 +25,10 @@ import {
   deposit,
   withdraw,
   transfer,
+  getBranches,
+  createBranch,
+  updateBranch,
+  deleteBranch,
 } from "../controllers/userControllers.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { roleMiddleware } from "../middlewares/roleMiddleware.js";
@@ -150,6 +154,31 @@ router.delete(
   authMiddleware,
   roleMiddleware(["manager"]),
   deleteCustomer
+);
+// New Branch Routes
+router.get(
+  "/branches",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  getBranches
+);
+router.post(
+  "/branches",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  createBranch
+);
+router.put(
+  "/branches/:branchId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  updateBranch
+);
+router.delete(
+  "/branches/:branchId",
+  authMiddleware,
+  roleMiddleware(["manager"]),
+  deleteBranch
 );
 
 // Banking Routes

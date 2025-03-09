@@ -2,6 +2,7 @@ import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
 import Transaction from "../models/Transaction.js";
 import User from "../models/User.js";
+import Branch from "../models/Branch.js";
 import Customer from "../models/Customer.js"; // Note: Consider consolidating into User
 import Joi from "joi";
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
@@ -15,6 +16,22 @@ const registerSchema = Joi.object({
   password: Joi.string().min(6).required(),
   role: Joi.string().valid("customer", "employee", "manager").required(),
 });
+
+// New Branch Validation Schemas
+const createBranchSchema = Joi.object({
+  branchId: Joi.string().required(),
+  name: Joi.string().required(),
+  location: Joi.string().required(),
+  managerId: Joi.string().optional(),
+});
+
+const updateBranchSchema = Joi.object({
+  branchId: Joi.string(),
+  name: Joi.string(),
+  location: Joi.string(),
+  managerId: Joi.string().allow(null),
+}).min(1);
+// (Other existing schemas remain unchanged)
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -127,21 +144,25 @@ export const registerUser = async (req, res) => {
   const { error } = registerSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
 
-  const { name, password, email, accountNumber, role } = req.body;
+  const { name, password, email, accountNumber, role, branchId } = req.body;
 
   try {
-    // Check for existing email in both User, Manager, and Employee collections
     const existingUser = await User.findOne({ email });
     const existingManager = await Manager.findOne({ email });
     const existingEmployee = await Employee.findOne({ email });
     if (existingUser || existingManager || existingEmployee)
       return res.status(400).json({ message: "User already exists" });
 
+    if ((role === "employee" || role === "manager") && branchId) {
+      const branch = await Branch.findById(branchId);
+      if (!branch)
+        return res.status(400).json({ message: "Invalid branch ID" });
+    }
+
     const hashedPassword = await hashPassword(password);
 
     let userRecord, managerRecord, employeeRecord;
     if (role === "manager") {
-      // Create User document for authentication
       userRecord = new User({
         userId: `USR${Date.now()}`,
         name,
@@ -150,10 +171,10 @@ export const registerUser = async (req, res) => {
         balance: 0,
         password: hashedPassword,
         role,
+        branchId: branchId || null, // Associate with branch if provided
       });
       await userRecord.save();
 
-      // Create Manager document for manager-specific data
       managerRecord = new Manager({
         managerId: `MGR${Date.now()}`,
         name,
@@ -163,7 +184,10 @@ export const registerUser = async (req, res) => {
       });
       await managerRecord.save();
 
-      // Generate token using User _id
+      if (branchId) {
+        await Branch.findByIdAndUpdate(branchId, { managerId: userRecord._id });
+      }
+
       const token = generateToken(userRecord._id, role);
       return res.status(201).json({
         message: "Registration successful",
@@ -173,10 +197,10 @@ export const registerUser = async (req, res) => {
           name: userRecord.name,
           email: userRecord.email,
           role: userRecord.role,
+          branchId: userRecord.branchId,
         },
       });
     } else if (role === "employee") {
-      // Create User document for authentication
       userRecord = new User({
         userId: `USR${Date.now()}`,
         name,
@@ -185,21 +209,20 @@ export const registerUser = async (req, res) => {
         balance: 0,
         password: hashedPassword,
         role,
+        branchId: branchId || null, // Associate with branch if provided
       });
       await userRecord.save();
 
-      // Create Employee document for employee-specific data
       employeeRecord = new Employee({
         name,
-        role: "Default Role", // Adjust based on schema or make optional
+        role: "Default Role",
         department: "Default Department",
-        salary: 0, // Default value; consider making optional
+        salary: 0,
         employeeId: `EMP${Date.now()}`,
         hireDate: new Date(),
       });
       await employeeRecord.save();
 
-      // Generate token using User _id
       const token = generateToken(userRecord._id, role);
       return res.status(201).json({
         message: "Registration successful",
@@ -209,6 +232,7 @@ export const registerUser = async (req, res) => {
           name: userRecord.name,
           email: userRecord.email,
           role: userRecord.role,
+          branchId: userRecord.branchId,
         },
       });
     } else {
@@ -240,7 +264,6 @@ export const registerUser = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
-
 // Login User
 export const loginUser = async (req, res) => {
   const { error } = loginSchema.validate(req.body);
@@ -437,7 +460,110 @@ export const transfer = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// CRUD for Branches
+export const getBranches = async (req, res) => {
+  try {
+    const branches = await Branch.find().populate("managerId", "name email");
+    res.status(200).json(branches);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
+export const createBranch = async (req, res) => {
+  const { error } = createBranchSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { branchId, name, location, managerId } = req.body;
+
+  try {
+    const existingBranch = await Branch.findOne({ branchId });
+    if (existingBranch)
+      return res.status(400).json({ message: "Branch ID already exists" });
+
+    if (managerId) {
+      const manager = await User.findById(managerId);
+      if (!manager || manager.role !== "manager")
+        return res.status(400).json({ message: "Invalid manager ID" });
+    }
+
+    const newBranch = new Branch({
+      branchId,
+      name,
+      location,
+      managerId: managerId || null,
+    });
+    await newBranch.save();
+
+    if (managerId) {
+      await User.findByIdAndUpdate(managerId, { branchId: newBranch._id });
+    }
+
+    res.status(201).json(newBranch);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateBranch = async (req, res) => {
+  const { error } = updateBranchSchema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { branchId } = req.params;
+  const updateData = req.body;
+
+  try {
+    const branch = await Branch.findOne({ branchId });
+    if (!branch) return res.status(404).json({ message: "Branch not found" });
+
+    if (updateData.managerId) {
+      const manager = await User.findById(updateData.managerId);
+      if (!manager || manager.role !== "manager")
+        return res.status(400).json({ message: "Invalid manager ID" });
+    }
+
+    const oldManagerId = branch.managerId;
+    Object.assign(branch, updateData);
+    await branch.save();
+
+    if (updateData.managerId && updateData.managerId !== oldManagerId) {
+      await User.findByIdAndUpdate(updateData.managerId, {
+        branchId: branch._id,
+      });
+      if (oldManagerId) {
+        await User.findByIdAndUpdate(oldManagerId, { branchId: null });
+      }
+    }
+
+    res.status(200).json(branch);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteBranch = async (req, res) => {
+  const { branchId } = req.params;
+
+  try {
+    const branch = await Branch.findOne({ branchId });
+    if (!branch) return res.status(404).json({ message: "Branch not found" });
+
+    const managerId = branch.managerId;
+    await branch.deleteOne();
+
+    if (managerId) {
+      await User.findByIdAndUpdate(managerId, { branchId: null });
+    }
+    await User.updateMany({ branchId: branch._id }, { branchId: null });
+
+    res.status(200).json({ message: "Branch deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// (Other existing functions remain unchanged)
+//
 // CRUD for Employees
 export const getEmployees = async (req, res) => {
   try {

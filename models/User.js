@@ -11,7 +11,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ["customer", "employee", "manager"],
     default: "customer",
-  }, // Added role
+  },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Branch", // New field to link to Branch
+    default: null,
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
