@@ -159,7 +159,7 @@ router.delete(
 router.get(
   "/branches",
   authMiddleware,
-  roleMiddleware(["manager"]),
+  roleMiddleware(["manager", "employee"]),
   getBranches
 );
 router.post(
