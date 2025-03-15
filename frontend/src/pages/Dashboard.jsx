@@ -6,12 +6,15 @@ function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/api/accounts`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((response) => setAccounts(response.data))
-      .catch((error) => console.error("Error fetching accounts:", error));
+    console.log("Token:", token);
+    if (token) {
+      axios
+        .get(`${import.meta.env.VITE_API_URL}/api/users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((response) => setAccounts(response.data))
+        .catch((error) => console.error("Error fetching accounts:", error));
+    }
   }, []);
 
   return (

@@ -7,17 +7,37 @@ import Customer from "../models/Customer.js"; // Note: Consider consolidating in
 import Joi from "joi";
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
+import winston from "winston";
+import mongoose from "mongoose"; // Added for transaction sessions
 
-// Validation Schemas
+// Configure Winston Logger
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: "error.log", level: "error" }),
+    new winston.transports.File({ filename: "combined.log" }),
+    new winston.transports.Console(),
+  ],
+});
+
+// Validation Schemas (unchanged from your original)
 const registerSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().email().required(),
   accountNumber: Joi.string().length(10).required(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string()
+    .min(8)
+    .pattern(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+    )
+    .required(),
   role: Joi.string().valid("customer", "employee", "manager").required(),
 });
 
-// New Branch Validation Schemas
 const createBranchSchema = Joi.object({
   branchId: Joi.string().required(),
   name: Joi.string().required(),
@@ -31,7 +51,6 @@ const updateBranchSchema = Joi.object({
   location: Joi.string(),
   managerId: Joi.string().allow(null),
 }).min(1);
-// (Other existing schemas remain unchanged)
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -171,7 +190,7 @@ export const registerUser = async (req, res) => {
         balance: 0,
         password: hashedPassword,
         role,
-        branchId: branchId || null, // Associate with branch if provided
+        branchId: branchId || null,
       });
       await userRecord.save();
 
@@ -189,6 +208,7 @@ export const registerUser = async (req, res) => {
       }
 
       const token = generateToken(userRecord._id, role);
+      logger.info(`Manager registered: ${email}, Role: ${role}`); // Audit log
       return res.status(201).json({
         message: "Registration successful",
         token,
@@ -209,7 +229,7 @@ export const registerUser = async (req, res) => {
         balance: 0,
         password: hashedPassword,
         role,
-        branchId: branchId || null, // Associate with branch if provided
+        branchId: branchId || null,
       });
       await userRecord.save();
 
@@ -224,6 +244,7 @@ export const registerUser = async (req, res) => {
       await employeeRecord.save();
 
       const token = generateToken(userRecord._id, role);
+      logger.info(`Employee registered: ${email}, Role: ${role}`); // Audit log
       return res.status(201).json({
         message: "Registration successful",
         token,
@@ -248,6 +269,7 @@ export const registerUser = async (req, res) => {
       await userRecord.save();
 
       const token = generateToken(userRecord._id, role);
+      logger.info(`Customer registered: ${email}, Role: ${role}`); // Audit log
       return res.status(201).json({
         message: "Registration successful",
         token,
@@ -261,9 +283,11 @@ export const registerUser = async (req, res) => {
       });
     }
   } catch (error) {
+    logger.error(`Registration failed: ${error.message}`); // Error log
     return res.status(500).json({ message: error.message });
   }
 };
+
 // Login User
 export const loginUser = async (req, res) => {
   const { error } = loginSchema.validate(req.body);
@@ -280,6 +304,7 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
 
     const token = generateToken(user._id, user.role);
+    logger.info(`User logged in: ${email}, Role: ${user.role}`); // Audit log
     return res.status(200).json({
       token,
       user: {
@@ -291,6 +316,7 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error(`Login failed: ${error.message}`); // Error log
     return res.status(500).json({ message: error.message });
   }
 };
@@ -332,10 +358,12 @@ export const deposit = async (req, res) => {
     });
     await transaction.save();
 
+    logger.info(`Deposit of ${amount} to account ${accountNumber}`); // Audit log
     res
       .status(200)
       .json({ message: "Deposit successful", balance: user.balance });
   } catch (error) {
+    logger.error(`Deposit failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -378,94 +406,125 @@ export const withdraw = async (req, res) => {
     });
     await transaction.save();
 
+    logger.info(`Withdrawal of ${amount} from account ${accountNumber}`); // Audit log
     res
       .status(200)
       .json({ message: "Withdrawal successful", balance: user.balance });
   } catch (error) {
+    logger.error(`Withdrawal failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
 
 export const transfer = async (req, res) => {
-  const { error } = transferSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.details[0].message });
-
-  const { fromAccount, toAccount, amount } = req.body;
-
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const currentUser = await User.findById(req.user.userId);
-    if (!currentUser)
+    const { fromAccount, toAccount, amount } = req.body;
+    const { error } = transferSchema.validate(req.body);
+    if (error)
+      return res.status(400).json({ message: error.details[0].message });
+
+    const currentUser = await User.findById(req.user.userId).session(session);
+    if (!currentUser) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "User not found" });
+    }
 
     if (
       currentUser.role === "customer" &&
       currentUser.accountNumber !== fromAccount
     ) {
+      await session.abortTransaction();
+      session.endSession();
       return res
         .status(403)
         .json({ message: "You can only transfer from your own account" });
     }
 
-    const sender = await User.findOne({ accountNumber: fromAccount });
-    const receiver = await User.findOne({ accountNumber: toAccount });
+    const sender = await User.findOne({ accountNumber: fromAccount }).session(
+      session
+    );
+    const receiver = await User.findOne({ accountNumber: toAccount }).session(
+      session
+    );
 
-    if (!sender || !receiver)
+    if (!sender || !receiver) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Account not found" });
-    if (sender.balance < amount)
+    }
+    if (sender.balance < amount) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ message: "Insufficient funds" });
-    if (fromAccount === toAccount)
+    }
+    if (fromAccount === toAccount) {
+      await session.abortTransaction();
+      session.endSession();
       return res
         .status(400)
         .json({ message: "Cannot transfer to the same account" });
+    }
 
     sender.balance -= amount;
     receiver.balance += amount;
 
-    await sender.save();
-    await receiver.save();
+    await sender.save({ session });
+    await receiver.save({ session });
 
-    // Generate unique transaction IDs for sender and receiver
     const senderTransactionId = `TXN${Date.now()}-${Math.random()
       .toString(36)
       .substr(2, 9)}`;
     const receiverTransactionId = `TXN${Date.now()}-${Math.random()
       .toString(36)
       .substr(2, 9)}`;
+    await Transaction.create(
+      [
+        {
+          transactionId: senderTransactionId,
+          userAccount: fromAccount,
+          type: "transfer_out",
+          amount: -amount,
+          date: new Date(),
+          status: "completed",
+        },
+        {
+          transactionId: receiverTransactionId,
+          userAccount: toAccount,
+          type: "transfer_in",
+          amount,
+          date: new Date(),
+          status: "completed",
+        },
+      ],
+      { session }
+    );
 
-    const senderTransaction = new Transaction({
-      transactionId: senderTransactionId,
-      userAccount: fromAccount,
-      type: "transfer_out",
-      amount: -amount,
-      date: new Date(),
-      status: "completed",
-    });
+    await session.commitTransaction();
+    session.endSession();
 
-    const receiverTransaction = new Transaction({
-      transactionId: receiverTransactionId,
-      userAccount: toAccount,
-      type: "transfer_in",
-      amount,
-      date: new Date(),
-      status: "completed",
-    });
-
-    await senderTransaction.save();
-    await receiverTransaction.save();
-
+    logger.info(`Transfer of ${amount} from ${fromAccount} to ${toAccount}`); // Audit log
     res
       .status(200)
       .json({ message: "Transfer successful", balance: sender.balance });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    logger.error(`Transfer failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
+
 // CRUD for Branches
 export const getBranches = async (req, res) => {
   try {
     const branches = await Branch.find().populate("managerId", "name email");
+    logger.info(`Branches fetched by user: ${req.user.email}`); // Audit log
     res.status(200).json(branches);
   } catch (error) {
+    logger.error(`Error fetching branches: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -499,8 +558,10 @@ export const createBranch = async (req, res) => {
       await User.findByIdAndUpdate(managerId, { branchId: newBranch._id });
     }
 
+    logger.info(`Branch created: ${branchId}, Name: ${name}`); // Audit log
     res.status(201).json(newBranch);
   } catch (error) {
+    logger.error(`Branch creation failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -535,8 +596,10 @@ export const updateBranch = async (req, res) => {
       }
     }
 
+    logger.info(`Branch updated: ${branchId}`); // Audit log
     res.status(200).json(branch);
   } catch (error) {
+    logger.error(`Branch update failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -556,20 +619,22 @@ export const deleteBranch = async (req, res) => {
     }
     await User.updateMany({ branchId: branch._id }, { branchId: null });
 
+    logger.info(`Branch deleted: ${branchId}`); // Audit log
     res.status(200).json({ message: "Branch deleted successfully" });
   } catch (error) {
+    logger.error(`Branch deletion failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
 
-// (Other existing functions remain unchanged)
-//
 // CRUD for Employees
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find();
+    logger.info(`Employees fetched by user: ${req.user.email}`); // Audit log
     res.status(200).json(employees);
   } catch (error) {
+    logger.error(`Error fetching employees: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -594,8 +659,11 @@ export const createEmployee = async (req, res) => {
       hireDate,
     });
     await newEmployee.save();
+
+    logger.info(`Employee created: ${employeeId}, Name: ${name}`); // Audit log
     res.status(201).json(newEmployee);
   } catch (error) {
+    logger.error(`Employee creation failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -614,8 +682,11 @@ export const updateEmployee = async (req, res) => {
 
     Object.assign(employee, updateData);
     await employee.save();
+
+    logger.info(`Employee updated: ${employeeId}`); // Audit log
     res.status(200).json(employee);
   } catch (error) {
+    logger.error(`Employee update failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -628,9 +699,11 @@ export const deleteEmployee = async (req, res) => {
     if (!employee)
       return res.status(404).json({ message: "Employee not found" });
 
-    await employee.remove();
+    await employee.deleteOne();
+    logger.info(`Employee deleted: ${employeeId}`); // Audit log
     res.status(200).json({ message: "Employee deleted successfully" });
   } catch (error) {
+    logger.error(`Employee deletion failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -639,8 +712,10 @@ export const deleteEmployee = async (req, res) => {
 export const getManagers = async (req, res) => {
   try {
     const managers = await Manager.find();
+    logger.info(`Managers fetched by user: ${req.user.email}`); // Audit log
     res.status(200).json(managers);
   } catch (error) {
+    logger.error(`Error fetching managers: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -664,8 +739,11 @@ export const createManager = async (req, res) => {
       hireDate,
     });
     await newManager.save();
+
+    logger.info(`Manager created: ${managerId}, Name: ${name}`); // Audit log
     res.status(201).json(newManager);
   } catch (error) {
+    logger.error(`Manager creation failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -683,8 +761,11 @@ export const updateManager = async (req, res) => {
 
     Object.assign(manager, updateData);
     await manager.save();
+
+    logger.info(`Manager updated: ${managerId}`); // Audit log
     res.status(200).json(manager);
   } catch (error) {
+    logger.error(`Manager update failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -696,18 +777,23 @@ export const deleteManager = async (req, res) => {
     const manager = await Manager.findOne({ managerId });
     if (!manager) return res.status(404).json({ message: "Manager not found" });
 
-    await manager.deleteOne(); // Updated to use deleteOne
+    await manager.deleteOne();
+    logger.info(`Manager deleted: ${managerId}`); // Audit log
     res.status(200).json({ message: "Manager deleted successfully" });
   } catch (error) {
+    logger.error(`Manager deletion failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
+
 // CRUD for Transactions
 export const getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find();
+    logger.info(`Transactions fetched by user: ${req.user.email}`); // Audit log
     res.status(200).json(transactions);
   } catch (error) {
+    logger.error(`Error fetching transactions: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -732,8 +818,11 @@ export const createTransaction = async (req, res) => {
       status,
     });
     await newTransaction.save();
+
+    logger.info(`Transaction created: ${transactionId}, Type: ${type}`); // Audit log
     res.status(201).json(newTransaction);
   } catch (error) {
+    logger.error(`Transaction creation failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -752,8 +841,11 @@ export const updateTransaction = async (req, res) => {
 
     Object.assign(transaction, updateData);
     await transaction.save();
+
+    logger.info(`Transaction updated: ${transactionId}`); // Audit log
     res.status(200).json(transaction);
   } catch (error) {
+    logger.error(`Transaction update failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -762,18 +854,15 @@ export const deleteTransaction = async (req, res) => {
   const { transactionId } = req.params;
 
   try {
-    // Find the transaction by its ID
     const transaction = await Transaction.findOne({ transactionId });
-    if (!transaction) {
+    if (!transaction)
       return res.status(404).json({ message: "Transaction not found" });
-    }
 
-    // Replace remove() with deleteOne()
     await transaction.deleteOne();
-
-    // Send success response
+    logger.info(`Transaction deleted: ${transactionId}`); // Audit log
     res.status(200).json({ message: "Transaction deleted successfully" });
   } catch (error) {
+    logger.error(`Transaction deletion failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -782,8 +871,10 @@ export const deleteTransaction = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find();
+    logger.info(`Users fetched by user: ${req.user.email}`); // Audit log
     res.status(200).json(users);
   } catch (error) {
+    logger.error(`Error fetching users: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -812,8 +903,10 @@ export const createUser = async (req, res) => {
     });
 
     await newUser.save();
+    logger.info(`User created: ${email}, Role: ${role}`); // Audit log
     res.status(201).json(newUser);
   } catch (error) {
+    logger.error(`User creation failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -856,8 +949,10 @@ export const updateUser = async (req, res) => {
     }
 
     await user.save();
+    logger.info(`User updated: ${userId}`); // Audit log
     res.status(200).json(user);
   } catch (error) {
+    logger.error(`User update failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -869,9 +964,11 @@ export const deleteUser = async (req, res) => {
     const user = await User.findOne({ userId });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    await user.remove();
+    await user.deleteOne();
+    logger.info(`User deleted: ${userId}`); // Audit log
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
+    logger.error(`User deletion failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -880,8 +977,10 @@ export const deleteUser = async (req, res) => {
 export const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.find();
+    logger.info(`Customers fetched by user: ${req.user.email}`); // Audit log
     res.status(200).json(customers);
   } catch (error) {
+    logger.error(`Error fetching customers: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -905,8 +1004,11 @@ export const createCustomer = async (req, res) => {
       hireDate,
     });
     await newCustomer.save();
+
+    logger.info(`Customer created: ${employeeId}, Name: ${name}`); // Audit log
     res.status(201).json(newCustomer);
   } catch (error) {
+    logger.error(`Customer creation failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -925,8 +1027,11 @@ export const updateCustomer = async (req, res) => {
 
     Object.assign(customer, updateData);
     await customer.save();
+
+    logger.info(`Customer updated: ${employeeId}`); // Audit log
     res.status(200).json(customer);
   } catch (error) {
+    logger.error(`Customer update failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
@@ -939,9 +1044,11 @@ export const deleteCustomer = async (req, res) => {
     if (!customer)
       return res.status(404).json({ message: "Customer not found" });
 
-    await customer.remove();
+    await customer.deleteOne();
+    logger.info(`Customer deleted: ${employeeId}`); // Audit log
     res.status(200).json({ message: "Customer deleted successfully" });
   } catch (error) {
+    logger.error(`Customer deletion failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };
