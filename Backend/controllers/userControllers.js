@@ -428,7 +428,6 @@ export const transfer = async (req, res) => {
     const currentUser = await User.findById(req.user.userId).session(session);
     if (!currentUser) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -437,7 +436,6 @@ export const transfer = async (req, res) => {
       currentUser.accountNumber !== fromAccount
     ) {
       await session.abortTransaction();
-      session.endSession();
       return res
         .status(403)
         .json({ message: "You can only transfer from your own account" });
@@ -452,17 +450,14 @@ export const transfer = async (req, res) => {
 
     if (!sender || !receiver) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: "Account not found" });
     }
     if (sender.balance < amount) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ message: "Insufficient funds" });
     }
     if (fromAccount === toAccount) {
       await session.abortTransaction();
-      session.endSession();
       return res
         .status(400)
         .json({ message: "Cannot transfer to the same account" });
@@ -504,15 +499,12 @@ export const transfer = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
-
-    logger.info(`Transfer of ${amount} from ${fromAccount} to ${toAccount}`); // Audit log
     res
       .status(200)
       .json({ message: "Transfer successful", balance: sender.balance });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    logger.error(`Transfer failed: ${error.message}`); // Error log
     res.status(500).json({ message: error.message });
   }
 };

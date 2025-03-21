@@ -24,9 +24,15 @@ function Login() {
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      setMessage(
-        "Login failed: " + (error.response?.data?.message || "Unknown error")
-      );
+      if (error.response) {
+        setMessage("Login failed: " + error.response.data.message);
+      } else if (error.request) {
+        setMessage(
+          "Login failed: No response from server. Check if backend is running."
+        );
+      } else {
+        setMessage("Login failed: " + error.message);
+      }
     }
   };
 
