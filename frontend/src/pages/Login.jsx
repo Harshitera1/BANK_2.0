@@ -1,19 +1,27 @@
-import { useState } from "react";
-import { login } from "../services/api";
+import { useState, useContext } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Box, Typography } from "@mui/material";
+import { AuthContext } from "../context/AuthContext.jsx";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await login(email, password);
-      localStorage.setItem("token", response.token);
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/users/login`,
+        {
+          email,
+          password,
+        }
+      );
+      login(response.data.token);
       setMessage("Login successful!");
       navigate("/dashboard");
     } catch (error) {
@@ -52,7 +60,13 @@ function Login() {
           Login
         </Button>
       </form>
-      {message && <Typography color="error">{message}</Typography>}
+      {message && (
+        <Typography
+          color={message.includes("successful") ? "success" : "error"}
+        >
+          {message}
+        </Typography>
+      )}
     </Box>
   );
 }

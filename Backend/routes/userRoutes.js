@@ -29,6 +29,7 @@ import {
   createBranch,
   updateBranch,
   deleteBranch,
+  getUserTransactions,
 } from "../controllers/userControllers.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { roleMiddleware } from "../middlewares/roleMiddleware.js";
@@ -115,6 +116,7 @@ router.delete(
   roleMiddleware(["employee", "manager"]),
   deleteTransaction
 );
+router.get("/user-transactions", authMiddleware, getUserTransactions);
 
 router.get("/users", authMiddleware, roleMiddleware(["manager"]), getUsers);
 router.post("/users", authMiddleware, roleMiddleware(["manager"]), createUser);

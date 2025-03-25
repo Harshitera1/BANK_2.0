@@ -2,3 +2,21 @@
 {"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-21T17:35:24.263Z"}
 {"level":"error","message":"Error fetching users: Cannot read properties of undefined (reading 'email')","timestamp":"2025-03-21T17:35:24.321Z"}
 {"level":"error","message":"Error fetching users: Cannot read properties of undefined (reading 'email')","timestamp":"2025-03-21T17:35:24.328Z"}
+{"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-25T16:40:38.613Z"}
+{"level":"error","message":"Error fetching users: Cannot read properties of undefined (reading 'email')","timestamp":"2025-03-25T16:40:38.721Z"}
+{"level":"error","message":"Error fetching users: Cannot read properties of undefined (reading 'email')","timestamp":"2025-03-25T16:40:38.729Z"}
+{"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-25T16:51:08.556Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T16:51:08.601Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T16:51:08.614Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T16:54:47.516Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T16:54:47.526Z"}
+{"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-25T16:55:17.915Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T16:55:17.962Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T16:55:17.977Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-25T17:35:43.275Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-25T17:35:43.293Z"}
+{"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-25T17:36:33.383Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T17:36:33.474Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T17:36:33.485Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-25T17:36:37.125Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-25T17:36:37.137Z"}

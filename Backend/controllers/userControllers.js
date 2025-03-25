@@ -789,6 +789,23 @@ export const getTransactions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+export const getUserTransactions = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const transactions = await Transaction.find({
+      userAccount: user.accountNumber,
+    });
+    logger.info(
+      `User transactions fetched by user: ${req.user?.email || "unknown"}`
+    );
+    res.status(200).json(transactions);
+  } catch (error) {
+    logger.error(`Error fetching user transactions: ${error.message}`);
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const createTransaction = async (req, res) => {
   const { error } = createTransactionSchema.validate(req.body);
@@ -863,7 +880,9 @@ export const deleteTransaction = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find();
-    logger.info(`Users fetched by user: ${req.user.email}`); // Audit log
+    // Safely access req.user.email, default to 'unknown' if undefined
+    const userEmail = req.user?.email || "unknown";
+    logger.info(`Users fetched by user: ${userEmail}`); // Audit log
     res.status(200).json(users);
   } catch (error) {
     logger.error(`Error fetching users: ${error.message}`); // Error log
