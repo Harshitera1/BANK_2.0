@@ -1,1 +1,4 @@
 {"level":"info","message":"User logged in: employee1@example.com, Role: employee","timestamp":"2025-03-15T03:51:20.291Z"}
+{"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-21T17:35:24.263Z"}
+{"level":"error","message":"Error fetching users: Cannot read properties of undefined (reading 'email')","timestamp":"2025-03-21T17:35:24.321Z"}
+{"level":"error","message":"Error fetching users: Cannot read properties of undefined (reading 'email')","timestamp":"2025-03-21T17:35:24.328Z"}

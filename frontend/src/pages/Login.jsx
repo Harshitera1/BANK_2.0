@@ -1,7 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
+import { login } from "../services/api";
 import { useNavigate } from "react-router-dom";
-import "./Login.css";
+import { TextField, Button, Box, Typography } from "@mui/material";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -12,52 +12,48 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/users/login`,
-        {
-          email,
-          password,
-        }
-      );
-      localStorage.setItem("token", response.data.token);
+      const response = await login(email, password);
+      localStorage.setItem("token", response.token);
       setMessage("Login successful!");
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      if (error.response) {
-        setMessage("Login failed: " + error.response.data.message);
-      } else if (error.request) {
-        setMessage(
-          "Login failed: No response from server. Check if backend is running."
-        );
-      } else {
-        setMessage("Login failed: " + error.message);
-      }
+      setMessage(
+        "Login failed: " + (error.response?.data?.message || "Unknown error")
+      );
     }
   };
 
   return (
-    <div className="login-container">
-      <h1>Login</h1>
+    <Box sx={{ maxWidth: 400, margin: "auto", mt: 5 }}>
+      <Typography variant="h4" gutterBottom>
+        Login
+      </Typography>
       <form onSubmit={handleLogin}>
-        <input
+        <TextField
+          fullWidth
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
+          margin="normal"
           required
         />
-        <input
+        <TextField
+          fullWidth
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
+          margin="normal"
           required
         />
-        <button type="submit">Login</button>
+        <Button type="submit" variant="contained" sx={{ mt: 2 }}>
+          Login
+        </Button>
       </form>
-      {message && <p>{message}</p>}
-    </div>
+      {message && <Typography color="error">{message}</Typography>}
+    </Box>
   );
 }
 
