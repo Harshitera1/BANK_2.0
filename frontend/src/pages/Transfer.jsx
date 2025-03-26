@@ -21,6 +21,7 @@ function Transfer() {
 
     try {
       const token = localStorage.getItem("token");
+      // eslint-disable-next-line no-unused-vars
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/users/transfer`,
         { fromAccount, toAccount, amount: parseFloat(amount) },
