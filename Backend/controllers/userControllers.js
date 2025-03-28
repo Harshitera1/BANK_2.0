@@ -193,6 +193,7 @@ export const registerUser = async (req, res) => {
         branchId: branchId || null,
       });
       await userRecord.save();
+      console.log("Manager User saved:", userRecord); // Add this line
 
       managerRecord = new Manager({
         managerId: `MGR${Date.now()}`,
@@ -202,13 +203,14 @@ export const registerUser = async (req, res) => {
         hireDate: new Date(),
       });
       await managerRecord.save();
+      console.log("Manager record saved:", managerRecord); // Add this line
 
       if (branchId) {
         await Branch.findByIdAndUpdate(branchId, { managerId: userRecord._id });
       }
 
       const token = generateToken(userRecord._id, role);
-      logger.info(`Manager registered: ${email}, Role: ${role}`); // Audit log
+      logger.info(`Manager registered: ${email}, Role: ${role}`);
       return res.status(201).json({
         message: "Registration successful",
         token,
@@ -232,6 +234,7 @@ export const registerUser = async (req, res) => {
         branchId: branchId || null,
       });
       await userRecord.save();
+      console.log("Employee User saved:", userRecord); // Add this line
 
       employeeRecord = new Employee({
         name,
@@ -242,9 +245,10 @@ export const registerUser = async (req, res) => {
         hireDate: new Date(),
       });
       await employeeRecord.save();
+      console.log("Employee record saved:", employeeRecord); // Add this line
 
       const token = generateToken(userRecord._id, role);
-      logger.info(`Employee registered: ${email}, Role: ${role}`); // Audit log
+      logger.info(`Employee registered: ${email}, Role: ${role}`);
       return res.status(201).json({
         message: "Registration successful",
         token,
@@ -267,9 +271,10 @@ export const registerUser = async (req, res) => {
         role,
       });
       await userRecord.save();
+      console.log("Customer User saved:", userRecord); // Add this line
 
       const token = generateToken(userRecord._id, role);
-      logger.info(`Customer registered: ${email}, Role: ${role}`); // Audit log
+      logger.info(`Customer registered: ${email}, Role: ${role}`);
       return res.status(201).json({
         message: "Registration successful",
         token,
@@ -283,40 +288,40 @@ export const registerUser = async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error(`Registration failed: ${error.message}`); // Error log
+    logger.error(`Registration failed: ${error.message}`);
+    console.error("Error during registration:", error); // Add this line
     return res.status(500).json({ message: error.message });
   }
 };
 
 // Login User
 export const loginUser = async (req, res) => {
-  const { error } = loginSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.details[0].message });
-
   const { email, password } = req.body;
-
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
     const isMatch = await comparePassword(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
     const token = generateToken(user._id, user.role);
-    logger.info(`User logged in: ${email}, Role: ${user.role}`); // Audit log
+    logger.info(`User logged in: ${email}, Role: ${user.role}`);
     return res.status(200).json({
+      message: "Login successful",
       token,
       user: {
-        userId: user.userId,
+        id: user._id,
         name: user.name,
         email: user.email,
-        accountNumber: user.accountNumber,
         role: user.role,
       },
     });
   } catch (error) {
-    logger.error(`Login failed: ${error.message}`); // Error log
+    logger.error(`Login failed: ${error.message}`);
     return res.status(500).json({ message: error.message });
   }
 };

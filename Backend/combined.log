@@ -20,3 +20,20 @@
 {"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-25T17:36:33.485Z"}
 {"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-25T17:36:37.125Z"}
 {"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-25T17:36:37.137Z"}
+{"level":"info","message":"Customer registered: abhi@example.com, Role: customer","timestamp":"2025-03-27T18:31:23.067Z"}
+{"level":"info","message":"Employee registered: employee1@example.com, Role: employee","timestamp":"2025-03-27T18:33:47.833Z"}
+{"level":"info","message":"Customer registered: ramjeet1@example.com, Role: customer","timestamp":"2025-03-27T18:34:24.660Z"}
+{"level":"info","message":"Manager registered: manager1@example.com, Role: manager","timestamp":"2025-03-27T18:35:29.071Z"}
+{"level":"info","message":"User logged in: ramjeet1@example.com, Role: customer","timestamp":"2025-03-27T18:36:20.096Z"}
+{"level":"info","message":"Branch created: BR004, Name: MainGB5","timestamp":"2025-03-27T18:38:08.472Z"}
+{"level":"info","message":"User logged in: ramjeet1@example.com, Role: customer","timestamp":"2025-03-27T18:38:34.761Z"}
+{"level":"info","message":"User logged in: abhi@example.com, Role: customer","timestamp":"2025-03-27T18:40:46.526Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-27T18:40:46.686Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-27T18:40:46.736Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-27T18:40:56.175Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-27T18:40:56.249Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-27T18:40:57.862Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-27T18:40:58.032Z"}
+{"level":"info","message":"User logged in: ramjeet1@example.com, Role: customer","timestamp":"2025-03-27T18:46:16.048Z"}
+{"level":"info","message":"Customer registered: ramjeets1@example.com, Role: customer","timestamp":"2025-03-27T18:47:05.360Z"}
+{"level":"info","message":"Customer registered: newcustomer123@example.com, Role: customer","timestamp":"2025-03-27T18:48:05.960Z"}
