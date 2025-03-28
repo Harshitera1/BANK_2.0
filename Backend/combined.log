@@ -37,3 +37,19 @@
 {"level":"info","message":"User logged in: ramjeet1@example.com, Role: customer","timestamp":"2025-03-27T18:46:16.048Z"}
 {"level":"info","message":"Customer registered: ramjeets1@example.com, Role: customer","timestamp":"2025-03-27T18:47:05.360Z"}
 {"level":"info","message":"Customer registered: newcustomer123@example.com, Role: customer","timestamp":"2025-03-27T18:48:05.960Z"}
+{"level":"error","message":"Registration failed: E11000 duplicate key error collection: test.users index: accountNumber_1 dup key: { accountNumber: \"0987667890\" }","timestamp":"2025-03-28T15:36:21.487Z"}
+{"level":"info","message":"Customer registered: ramjeetQ1@example.com, Role: customer","timestamp":"2025-03-28T15:36:28.563Z"}
+{"level":"error","message":"Registration failed: E11000 duplicate key error collection: test.users index: accountNumber_1 dup key: { accountNumber: \"1234567880\" }","timestamp":"2025-03-28T15:38:56.923Z"}
+{"level":"info","message":"Customer registered: abhi1@example.com, Role: customer","timestamp":"2025-03-28T15:39:08.727Z"}
+{"level":"error","message":"Registration failed: E11000 duplicate key error collection: test.users index: accountNumber_1 dup key: { accountNumber: \"0987654321\" }","timestamp":"2025-03-28T15:41:54.711Z"}
+{"level":"info","message":"Manager registered: Manager1@example.com, Role: manager","timestamp":"2025-03-28T15:42:03.267Z"}
+{"level":"info","message":"User logged in: Manager1@example.com, Role: manager","timestamp":"2025-03-28T15:42:57.106Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-28T15:42:57.364Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-28T15:42:57.490Z"}
+{"level":"info","message":"Deposit of 100000 to account 0987607890","timestamp":"2025-03-28T15:44:47.932Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-28T15:47:36.960Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-28T15:47:37.040Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-28T15:47:50.704Z"}
+{"level":"info","message":"User transactions fetched by user: unknown","timestamp":"2025-03-28T15:47:50.896Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-28T15:47:52.255Z"}
+{"level":"info","message":"Users fetched by user: unknown","timestamp":"2025-03-28T15:47:52.404Z"}
